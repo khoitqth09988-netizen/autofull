@@ -164,6 +164,7 @@
     // ---------- HTML ----------
     const el = document.createElement('div');
     el.id = '__hud';
+    el.style.display = 'none';
     el.innerHTML = `
       <div class="hud-h">
         <span>🛠 HUD v5</span>
@@ -267,8 +268,7 @@
     }
 
     // ---------- Toggle Alt+X / Minimize / Shortcuts ----------
-    let visible = true;
-    el.style.display = 'block';
+    let visible = false;
     const toggle = () => { visible = !visible; el.style.display = visible ? 'block' : 'none'; };
     let minimized = false;
     $('__hud_min').onclick = () => {
