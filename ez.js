@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Typing HUD v3 (Admin + Console Suppress)
+// @name         Typing HUD v5 (Console Suppress)
 // @namespace    typing.hud
-// @version      3.0
-// @description  HUD ẩn cho typing demo: auto-type + admin + suppress console
+// @version      5.0
+// @description  HUD ẩn cho typing demo: auto-type + presets + pause + stats + suppress console
 // @match        https://typing.fpshn.workers.dev/*
 // @match        http://localhost:*/*
 // @match        http://127.0.0.1:*/*
@@ -138,6 +138,8 @@
       #__hud button.warn{background:#78350f;border-color:#92400e}
       #__hud .st{display:flex;justify-content:space-between;margin:2px 0;
         font-size:11px;color:#94a3b8}
+      #__hud .st-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px}
+      #__hud .st-grid .st{margin:0}
       #__hud .st b{color:#38bdf8;font-weight:600}
       #__hud .st b.ok{color:#22c55e}
       #__hud .st b.bad{color:#ef4444}
@@ -163,50 +165,82 @@
     const el = document.createElement('div');
     el.id = '__hud';
     el.innerHTML = `
-      <div class="hud-h"><span>🛠 HUD v3</span><span class="hud-close" id="__hud_close">✕</span></div>
-      <div class="hud-body">
-        <div class="hud-sec">
-          <h4>Trạng thái <span class="badge" id="__hud_ready">…</span> <span class="badge" id="__hud_console">…</span></h4>
-          <div class="st"><span>view / status</span><b id="__hud_view">–</b></div>
-          <div class="st"><span>Đã gõ / Target</span><b id="__hud_len">–</b></div>
-          <div class="st"><span>kd / len</span><b id="__hud_kd">–</b></div>
-          <div class="st"><span>sd (rhythm)</span><b id="__hud_sd">–</b></div>
-          <div class="st"><span>CHEAT</span><b id="__hud_cheat">–</b></div>
-        </div>
-
-        <div class="hud-sec" id="__hud_admin_sec">
-          <h4>🔐 Admin (Giám thị) <span class="badge" id="__hud_admin_badge">…</span></h4>
-          <div id="__hud_admin_body">…</div>
-        </div>
-
-        <div class="hud-sec">
-          <h4>Tham số (clamp 2 lớp)</h4>
-          <label>Tốc độ <span><input type="number" id="__hud_cps" value="7" min="4" max="10" step="0.5"> CPS <span class="rng">[4–10]</span></span></label>
-          <label>Typo <span><input type="number" id="__hud_typo" value="8" min="0" max="15"> % <span class="rng">[0–15]</span></span></label>
-          <label>Đổi dấu <span><input type="number" id="__hud_dia" value="35" min="0" max="60"> % <span class="rng">[0–60]</span></span></label>
-          <label>Think pause <span><input type="number" id="__hud_think" value="2" min="0" max="5" step="0.5"> % <span class="rng">[0–5]</span></span></label>
-          <label>Burst <span><input type="number" id="__hud_burst" value="12" min="0" max="25"> % <span class="rng">[0–25]</span></span></label>
-          <div class="row2">
-            <button class="go" id="__hud_start">▶ Bắt đầu</button>
-            <button class="stop" id="__hud_stop" disabled>■ Dừng</button>
+      <div class="hud-h">
+        <span>🛠 HUD v5</span>
+        <span class="hud-btns">
+          <span class="hud-min" id="__hud_min" title="Thu gọn / mở rộng">–</span>
+          <span class="hud-close" id="__hud_close" title="Ẩn HUD (Alt+X)">✕</span>
+        </span>
+      </div>
+      <div class="hud-body" id="__hud_body">
+        <div class="hud-sec" id="__hud_sec_status">
+          <h4 class="sec-h"><span class="chev">▾</span> Trạng thái <span class="badge" id="__hud_ready">…</span> <span class="badge" id="__hud_console">…</span></h4>
+          <div class="hud-sec-body">
+            <div class="prog"><div class="prog-fill" id="__hud_prog"></div></div>
+            <div class="st-grid">
+              <div class="st"><span>view / status</span><b id="__hud_view">–</b></div>
+              <div class="st"><span>Đã gõ / Target</span><b id="__hud_len">–</b></div>
+              <div class="st"><span>kd / len</span><b id="__hud_kd">–</b></div>
+              <div class="st"><span>sd (rhythm)</span><b id="__hud_sd">–</b></div>
+              <div class="st"><span>CHEAT</span><b id="__hud_cheat">–</b></div>
+              <div class="st"><span>WPM</span><b id="__hud_wpm">–</b></div>
+              <div class="st"><span>Thời gian</span><b id="__hud_time">–</b></div>
+              <div class="st"><span>Phiên này</span><b id="__hud_sess">0</b></div>
+              <div class="st"><span>Tổng ký tự</span><b id="__hud_total">0</b></div>
+            </div>
           </div>
         </div>
 
-        <div class="hud-sec">
-          <h4>Quick Actions</h4>
-          <div class="row3">
-            <button id="__hud_defaults">↺ Defaults</button>
-            <button id="__hud_reset_tl">↻ Reset TL</button>
-            <button id="__hud_clear_cheat">✕ Xóa CHEAT</button>
-          </div>
-          <div class="row2">
-            <button id="__hud_restore_console">🔓 Restore console</button>
-            <button class="warn" id="__hud_destroy">🗑 Gỡ HUD</button>
+        <div class="hud-sec" id="__hud_sec_params">
+          <h4 class="sec-h"><span class="chev">▾</span> Tham số (clamp 2 lớp)</h4>
+          <div class="hud-sec-body">
+            <div class="preset-row">
+              <button data-preset="safe">🛡 An toàn</button>
+              <button data-preset="normal">⚖ Thường</button>
+              <button data-preset="fast">⚡ Nhanh</button>
+              <button data-preset="max">🔥 Tối đa</button>
+            </div>
+            <label>Tốc độ <span><input type="number" id="__hud_cps" value="7" min="4" max="10" step="0.5"> CPS <span class="rng">[4–10]</span></span></label>
+            <label>Typo <span><input type="number" id="__hud_typo" value="8" min="0" max="15"> % <span class="rng">[0–15]</span></span></label>
+            <label>Đổi dấu <span><input type="number" id="__hud_dia" value="35" min="0" max="60"> % <span class="rng">[0–60]</span></span></label>
+            <label>Think pause <span><input type="number" id="__hud_think" value="2" min="0" max="5" step="0.5"> % <span class="rng">[0–5]</span></span></label>
+            <label>Burst <span><input type="number" id="__hud_burst" value="12" min="0" max="25"> % <span class="rng">[0–25]</span></span></label>
+            <label>Nghỉ giữa từ <span><input type="number" id="__hud_word" value="40" min="0" max="100"> % <span class="rng">[0–100]</span></span></label>
+            <label class="chk"><input type="checkbox" id="__hud_autohide"> Tự ẩn HUD khi gõ xong</label>
+            <div class="row3">
+              <button class="go" id="__hud_start">▶ Bắt đầu</button>
+              <button id="__hud_pause" disabled>⏸ Tạm dừng</button>
+              <button class="stop" id="__hud_stop" disabled>■ Dừng</button>
+            </div>
           </div>
         </div>
 
-        <div class="hud-sec"><h4>Log (console chỉ hiện ở đây)</h4><div id="__hud_log">Alt+X · console đã bị chặn</div></div>
-        <div class="hint">Alt+X · console suppressed · 7 CPS · 8% typo · 35% dấu</div>
+        <div class="hud-sec" id="__hud_sec_actions">
+          <h4 class="sec-h"><span class="chev">▾</span> Quick Actions</h4>
+          <div class="hud-sec-body">
+            <div class="row3">
+              <button id="__hud_defaults">↺ Defaults</button>
+              <button id="__hud_reset_tl">↻ Reset TL</button>
+              <button id="__hud_clear_cheat">✕ Xóa CHEAT</button>
+            </div>
+            <div class="row2">
+              <button id="__hud_restore_console">🔓 Restore console</button>
+              <button class="warn" id="__hud_destroy">🗑 Gỡ HUD</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="hud-sec" id="__hud_sec_log">
+          <h4 class="sec-h"><span class="chev">▾</span> Log (console chỉ hiện ở đây)</h4>
+          <div class="hud-sec-body">
+            <div id="__hud_log">Alt+X · console đã bị chặn</div>
+            <div class="row2" style="margin-top:4px">
+              <button id="__hud_log_clear">🧹 Xóa log</button>
+              <button id="__hud_log_copy">📋 Sao chép</button>
+            </div>
+          </div>
+        </div>
+        <div class="hint">Alt+X ẩn/hiện · Alt+S chạy/dừng · Alt+P tạm dừng</div>
       </div>`;
     document.body.appendChild(el);
 
@@ -232,14 +266,41 @@
       window.__hud_v3_buffer.length = 0;
     }
 
-    // ---------- Toggle Alt+X ----------
+    // ---------- Toggle Alt+X / Minimize / Shortcuts ----------
     let visible = true;
     el.style.display = 'block';
     const toggle = () => { visible = !visible; el.style.display = visible ? 'block' : 'none'; };
+    let minimized = false;
+    $('__hud_min').onclick = () => {
+      minimized = !minimized;
+      $('__hud_body').style.display = minimized ? 'none' : '';
+      $('__hud_min').textContent = minimized ? '▢' : '–';
+    };
     document.addEventListener('keydown', e => {
-      if (e.altKey && (e.key === 'x' || e.key === 'X')) { e.preventDefault(); e.stopPropagation(); toggle(); }
+      if (!e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (k === 'x') { e.preventDefault(); e.stopPropagation(); toggle(); return; }
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (k === 's') { e.preventDefault(); e.stopPropagation(); running ? $('__hud_stop').click() : $('__hud_start').click(); }
+      else if (k === 'p') { e.preventDefault(); e.stopPropagation(); $('__hud_pause').click(); }
     });
     $('__hud_close').onclick = toggle;
+
+    // ---------- Collapsible sections (persist) ----------
+    const COLLAPSE_KEY = '__hud_v5_collapsed';
+    let collapsed = {};
+    try { collapsed = JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '{}'); } catch (e) {}
+    el.querySelectorAll('.hud-sec').forEach(sec => {
+      const h = sec.querySelector('.sec-h');
+      if (!h) return;
+      if (collapsed[sec.id]) sec.classList.add('collapsed');
+      h.addEventListener('click', () => {
+        sec.classList.toggle('collapsed');
+        collapsed[sec.id] = sec.classList.contains('collapsed');
+        try { localStorage.setItem(COLLAPSE_KEY, JSON.stringify(collapsed)); } catch (e) {}
+      });
+    });
     $('__hud_destroy').onclick = () => {
       el.remove(); style.remove();
       window.__hud_v3_installed = false;
@@ -311,13 +372,55 @@
       TYPO:  clamp(+$('__hud_typo').value  || 0, 0, 15) / 100,
       DIA:   clamp(+$('__hud_dia').value   || 0, 0, 60) / 100,
       THINK: clamp(+$('__hud_think').value || 0, 0, 5)  / 100,
-      BURST: clamp(+$('__hud_burst').value || 0, 0, 25) / 100
+      BURST: clamp(+$('__hud_burst').value || 0, 0, 25) / 100,
+      WORD:  clamp(+$('__hud_word').value  || 0, 0, 100) / 100
     });
+    const applyParams = p => {
+      $('__hud_cps').value = p.cps; $('__hud_typo').value = p.typo; $('__hud_dia').value = p.dia;
+      $('__hud_think').value = p.think; $('__hud_burst').value = p.burst; $('__hud_word').value = p.word;
+      persist();
+    };
     $('__hud_defaults').onclick = () => {
-      $('__hud_cps').value = 7; $('__hud_typo').value = 8; $('__hud_dia').value = 35;
-      $('__hud_think').value = 2; $('__hud_burst').value = 12;
-      try { localStorage.removeItem(PARAM_KEY); } catch (e) {}
+      applyParams({ cps: 7, typo: 8, dia: 35, think: 2, burst: 12, word: 40 });
       log('↺ Defaults');
+    };
+
+    // ---------- Presets ----------
+    const PRESETS = {
+      safe:   { cps: 5,  typo: 12, dia: 45, think: 3,   burst: 8,  word: 60 },
+      normal: { cps: 7,  typo: 8,  dia: 35, think: 2,   burst: 12, word: 40 },
+      fast:   { cps: 9,  typo: 5,  dia: 20, think: 1,   burst: 18, word: 25 },
+      max:    { cps: 10, typo: 2,  dia: 10, think: 0.5, burst: 25, word: 10 }
+    };
+    el.querySelectorAll('[data-preset]').forEach(btn => {
+      btn.onclick = () => {
+        const p = PRESETS[btn.dataset.preset];
+        if (!p) return;
+        applyParams(p);
+        log(`🎚 Preset ${btn.textContent.trim()} · ${p.cps} CPS · typo ${p.typo}% · dấu ${p.dia}%`);
+      };
+    });
+
+    // ---------- Auto-hide on finish (persist) ----------
+    const AUTOHIDE_KEY = '__hud_v5_autohide';
+    try { $('__hud_autohide').checked = localStorage.getItem(AUTOHIDE_KEY) === '1'; } catch (e) {}
+    $('__hud_autohide').addEventListener('change', () => {
+      try { localStorage.setItem(AUTOHIDE_KEY, $('__hud_autohide').checked ? '1' : '0'); } catch (e) {}
+    });
+
+    // ---------- Session stats (persist) ----------
+    const STATS_KEY = '__hud_v5_stats';
+    let stats = { total: 0, runs: 0 };
+    try { stats = Object.assign(stats, JSON.parse(localStorage.getItem(STATS_KEY) || '{}')); } catch (e) {}
+    const saveStats = () => { try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch (e) {} };
+    $('__hud_total').textContent = stats.total;
+
+    // ---------- Log tools ----------
+    $('__hud_log_clear').onclick = () => { const b = $('__hud_log'); if (b) b.textContent = ''; log('🧹 Đã xóa log'); };
+    $('__hud_log_copy').onclick = async () => {
+      const b = $('__hud_log'); if (!b) return;
+      try { await navigator.clipboard.writeText(b.textContent); log('📋 Đã sao chép log'); }
+      catch (e) { log('📋 Không sao chép được: ' + e.message); }
     };
 
     // ---------- Bảng ngẫu nhiên ----------
@@ -380,103 +483,6 @@
       paint();
     };
 
-    // ---------- Admin section ----------
-    let _admHad = null;
-    const buildAdminSection = () => {
-      const A = g('A');
-      const badge = $('__hud_admin_badge');
-      const body = $('__hud_admin_body');
-      if (!body) return;
-
-      if (!A) {
-        badge.textContent = 'CHƯA LOGIN'; badge.className = 'badge off';
-        body.innerHTML = `
-          <label style="display:block">Mật khẩu giám thị
-            <input type="password" id="__hud_admin_pw" placeholder="Nhập mật khẩu giám thị…" autocomplete="off">
-          </label>
-          <button class="go" id="__hud_admin_login" style="margin-top:6px">🔐 Đăng nhập</button>`;
-        const pw = $('__hud_admin_pw');
-        pw.addEventListener('keydown', e => { if (e.key === 'Enter') $('__hud_admin_login').click(); });
-        $('__hud_admin_login').onclick = () => {
-          const p = pw.value.trim();
-          if (!p) return log('Nhập mật khẩu trước');
-          try { g('tx')({ t:'admin', pass: p }); } catch (e) { log('Lỗi: ' + e.message); return; }
-          log('Đang gửi đăng nhập admin…');
-          $('__hud_admin_login').disabled = true;
-          setTimeout(() => {
-            if ($('__hud_admin_login') && !g('A')) {
-              $('__hud_admin_login').disabled = false;
-              log('❌ Sai mật khẩu hoặc chưa kết nối WS');
-            }
-          }, 3000);
-        };
-        return;
-      }
-
-      // Đã đăng nhập
-      badge.textContent = A.role === 2 ? 'PROCTOR' : 'ADMIN';
-      badge.className = 'badge on';
-      body.innerHTML = `
-        <div class="st"><span>Role</span><b>${A.role === 2 ? 'Giám thị lớp' : 'Giám thị 1'}</b></div>
-        <div class="st"><span>Học sinh</span><b id="__hud_cnt_stu">${A.students?.length ?? 0}</b></div>
-        <div class="st"><span>Phòng live</span><b id="__hud_cnt_live">${A.live?.length ?? 0}</b></div>
-        <div class="st"><span>Lớp active</span><b id="__hud_cnt_cls">${A.cls?.length ?? 0}</b></div>
-        <div class="st"><span>Cheat log</span><b id="__hud_cnt_cheat">${A.cheatlog?.length ?? 0}</b></div>
-        <div class="row2" style="margin-top:6px">
-          <button class="go" id="__hud_goto_admin">📊 Admin panel</button>
-          <button id="__hud_online">👥 Online</button>
-        </div>
-        <div class="row2">
-          <button id="__hud_export">⬇ Export 400</button>
-          <button id="__hud_backup">💾 Backup</button>
-        </div>
-        <div class="row2">
-          <button class="warn" id="__hud_void">💥 Void SV</button>
-          <button class="warn" id="__hud_reset_lb">🗑 Reset LB</button>
-        </div>
-        <div class="row2">
-          <button class="stop" id="__hud_admin_logout">🚪 Logout</button>
-          <button id="__hud_gohome">🏠 Home</button>
-        </div>`;
-
-      $('__hud_goto_admin').onclick = () => {
-        try { eval("view = 'admin'"); g('render')(); log('📊 → Admin panel'); } catch (e) { log('Lỗi: ' + e.message); }
-      };
-      $('__hud_online').onclick = () => {
-        try { g('openOnline')(); log('👥 → Online list'); } catch (e) { log('Lỗi: ' + e.message); }
-      };
-      $('__hud_export').onclick = () => {
-        try { g('tx')({ t:'exporttop' }); log('⬇ Đang xuất Excel…'); } catch (e) { log('Lỗi: ' + e.message); }
-      };
-      $('__hud_backup').onclick = () => {
-        try { g('tx')({ t:'backup' }); log('💾 Đang tải backup…'); } catch (e) { log('Lỗi: ' + e.message); }
-      };
-      $('__hud_void').onclick = () => {
-        const k = prompt('Nhập MSSV cần hủy toàn bộ điểm:');
-        if (!k) return;
-        if (!confirm('Hủy toàn bộ điểm của ' + k + '?')) return;
-        try { g('tx')({ t:'voidstudent', mssv: k }); log('💥 Đã gửi void ' + k); } catch (e) { log('Lỗi: ' + e.message); }
-      };
-      $('__hud_reset_lb').onclick = () => {
-        if (!confirm('Xóa TOÀN BỘ bảng xếp hạng (5 mốc)?')) return;
-        try { g('tx')({ t:'resetlb' }); log('🗑 Đã gửi reset LB'); } catch (e) { log('Lỗi: ' + e.message); }
-      };
-      $('__hud_admin_logout').onclick = () => {
-        try { g('staffLogout')(); log('🚪 Đã logout'); } catch (e) { log('Lỗi: ' + e.message); }
-      };
-      $('__hud_gohome').onclick = () => {
-        try { g('goHome')(); log('🏠 → Home'); } catch (e) { log('Lỗi: ' + e.message); }
-      };
-    };
-
-    const refreshAdminCounts = () => {
-      const A = g('A'); if (!A) return;
-      const s = $('__hud_cnt_stu');   if (s) s.textContent = A.students?.length ?? 0;
-      const l = $('__hud_cnt_live');  if (l) l.textContent = A.live?.length ?? 0;
-      const c = $('__hud_cnt_cls');   if (c) c.textContent = A.cls?.length ?? 0;
-      const ch = $('__hud_cnt_cheat');if (ch) ch.textContent = A.cheatlog?.length ?? 0;
-    };
-
     // ---------- Live status ----------
     const updateHud = () => {
       if (!visible) return;
@@ -495,6 +501,20 @@
       const len = (S && S.text) ? S.text.length : 0;
       const pos = OKV ? OKV.length : 0;
       $('__hud_len').textContent = len ? `${pos} / ${len}` : '–';
+      $('__hud_prog').style.width = (len ? Math.min(100, Math.round(pos / len * 100)) : 0) + '%';
+      $('__hud_sess').textContent = pos;
+
+      // WPM + thời gian chạy
+      if (running && runState.start) {
+        const el2 = (Date.now() - runState.start) / 1000;
+        const wpm = el2 > 2 ? Math.round((pos / 5) / (el2 / 60)) : 0;
+        $('__hud_wpm').textContent = wpm || '–';
+        const mm = Math.floor(el2 / 60), ss = Math.floor(el2 % 60);
+        $('__hud_time').textContent = mm + ':' + String(ss).padStart(2, '0');
+      } else {
+        $('__hud_wpm').textContent = '–';
+        $('__hud_time').textContent = '–';
+      }
 
       if (TL && pos > 0) {
         const ratio = TL.kd / Math.max(1, pos);
@@ -509,13 +529,7 @@
       const ce = $('__hud_cheat');
       ce.textContent = CHEAT || '(trống)';
       ce.className = CHEAT ? 'bad' : 'ok';
-
-      // Admin state
-      const has = !!g('A');
-      if (has !== _admHad) { _admHad = has; buildAdminSection(); }
-      else refreshAdminCounts();
     };
-    buildAdminSection();
     setInterval(updateHud, 500);
 
     // ---------- Quick actions ----------
@@ -530,15 +544,25 @@
       log('Đã xóa CHEAT');
     };
 
-    // ---------- Start/Stop ----------
-    let running = false, stopFlag = false;
+    // ---------- Start/Stop/Pause ----------
+    let running = false, stopFlag = false, pauseFlag = false;
+    const runState = { start: 0 };
+    const waitPause = async () => { while (pauseFlag && !stopFlag) await sleep(200); };
     $('__hud_stop').onclick = () => { stopFlag = true; log('Yêu cầu dừng…'); };
+    $('__hud_pause').onclick = () => {
+      if (!running) return;
+      pauseFlag = !pauseFlag;
+      $('__hud_pause').textContent = pauseFlag ? '▶ Tiếp tục' : '⏸ Tạm dừng';
+      log(pauseFlag ? '⏸ Đã tạm dừng' : '▶ Tiếp tục gõ');
+    };
 
     $('__hud_start').onclick = async () => {
       if (running) return log('Đang chạy');
       if (typeof g('S') === 'undefined') return log('Chưa sẵn sàng');
-      running = true; stopFlag = false;
-      $('__hud_start').disabled = true; $('__hud_stop').disabled = false;
+      running = true; stopFlag = false; pauseFlag = false;
+      runState.start = Date.now();
+      $('__hud_start').disabled = true; $('__hud_stop').disabled = false; $('__hud_pause').disabled = false;
+      $('__hud_pause').textContent = '⏸ Tạm dừng';
 
       try {
         let S = g('S'), ta = g('ta'), view = g('view');
@@ -550,7 +574,7 @@
 
         const P = readParams();
         const BASE_DELAY = 1000 / P.CPS;
-        log(`▶ ${P.CPS} CPS · typo ${(P.TYPO*100).toFixed(0)}% · dấu ${(P.DIA*100).toFixed(0)}% · think ${(P.THINK*100).toFixed(0)}% · burst ${(P.BURST*100).toFixed(0)}%`);
+        log(`▶ ${P.CPS} CPS · typo ${(P.TYPO*100).toFixed(0)}% · dấu ${(P.DIA*100).toFixed(0)}% · think ${(P.THINK*100).toFixed(0)}% · burst ${(P.BURST*100).toFixed(0)}% · nghỉ từ ${(P.WORD*100).toFixed(0)}%`);
 
         const me = S.me, target = S.text;
         const TL = g('TL');
@@ -560,6 +584,8 @@
         let buffer = '', i = 0, burstLeft = 0;
 
         const typeChar = async (correctCh) => {
+          await waitPause();
+          if (correctCh === ' ' && Math.random() < P.WORD) await sleep(rand(250, 700));
           if (Math.random() < P.THINK) await sleep(rand(600, 1800));
           const base = BASE_MAP[correctCh.toLowerCase()];
           if (base && Math.random() < P.DIA && correctCh !== base) {
@@ -596,6 +622,8 @@
         };
 
         while (i < target.length && !stopFlag) {
+          await waitPause();
+          if (stopFlag) break;
           const cur = g('S');
           if (!cur || cur.status !== 'running' || g('CHEAT') || (cur.players && cur.players[me] && cur.players[me].done)) {
             log(`Dừng: status=${cur && cur.status} cheat=${g('CHEAT')}`); break;
@@ -608,14 +636,18 @@
           await typeChar(target[i]); buffer += target[i]; i++;
         }
 
+        const finished = i >= target.length && !stopFlag;
         log(`■ Xong ${i}/${target.length} · kd/len=${(TL.kd/Math.max(1,target.length)).toFixed(2)}`);
+        if (i > 0) { stats.total += i; stats.runs++; saveStats(); $('__hud_total').textContent = stats.total; }
+        if (finished && $('__hud_autohide').checked && visible) { log('🙈 Tự ẩn HUD'); toggle(); }
       } finally {
-        running = false; stopFlag = false;
-        $('__hud_start').disabled = false; $('__hud_stop').disabled = true;
+        running = false; stopFlag = false; pauseFlag = false;
+        $('__hud_start').disabled = false; $('__hud_stop').disabled = true; $('__hud_pause').disabled = true;
+        $('__hud_pause').textContent = '⏸ Tạm dừng';
       }
     };
 
-    console.log('[HUD v3] Sẵn sàng. Alt+X để mở/đóng. Console đã suppress.');
+    console.log('[HUD v5] Sẵn sàng. Alt+X ẩn/hiện · Alt+S chạy/dừng · Alt+P tạm dừng. Console đã suppress.');
   };
 
   // ========== 4. Inject HUD ==========
