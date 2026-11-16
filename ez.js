@@ -1,97 +1,63 @@
 (() => {
-  // ============================================================
-  // PART 1: SHIELD (idempotent, cài trước để bảo vệ #ta)
-  // ============================================================
+  // ===== PART 1: SHIELD =====
   if (!window.__shieldState) window.__shieldState = { on: true };
   if (!window.__shieldToggle) {
     window.__shieldToggle = (v) => {
       window.__shieldState.on = !!v;
-      try {
-        if (window.__shieldState.on && typeof ta !== 'undefined' && ta && typeof OKV !== 'undefined') ta.value = OKV;
-      } catch (e) {}
+      try { if (window.__shieldState.on && typeof ta !== 'undefined' && ta && typeof OKV !== 'undefined') ta.value = OKV; } catch (e) {}
       return window.__shieldState.on;
     };
   }
-
   if (!window.__shieldV2Installed) {
     window.__shieldV2Installed = true;
-
-    const norm = v => v.replace(/\n/g, ' ').replace(/^\s+/, '').replace(/\s{2,}/g, ' ');
+    const normS = v => v.replace(/\n/g,' ').replace(/^\s+/,'').replace(/\s{2,}/g,' ');
     const isTa = (e) => e.target && e.target.id === 'ta';
-    const isModifierKey = (e) => ['Alt','Control','Meta','Shift'].includes(e.key);
-    const hasModifier = (e) => e.altKey || e.ctrlKey || e.metaKey;
-
-    // FIX: cho modifier keydown + mọi keydown có modifier đi qua (Alt+X hoạt động)
+    const isMod = (e) => ['Alt','Control','Meta','Shift'].includes(e.key);
+    const hasMod = (e) => e.altKey || e.ctrlKey || e.metaKey;
     document.addEventListener('keydown', (e) => {
       if (!window.__shieldState.on || !isTa(e)) return;
-      if (isModifierKey(e) || hasModifier(e)) return;
-      e.preventDefault();
-      e.stopPropagation();
+      if (isMod(e) || hasMod(e)) return;
+      e.preventDefault(); e.stopPropagation();
     }, true);
-
-    ['beforeinput','keypress','paste','drop','compositionstart','compositionupdate','compositionend']
-      .forEach(ev => {
-        document.addEventListener(ev, (e) => {
-          if (!window.__shieldState.on || !isTa(e)) return;
-          e.preventDefault();
-          e.stopPropagation();
-        }, true);
-      });
-
-    // Fallback 1: input event - restore ngay nếu user lọt chữ vào
+    ['beforeinput','keypress','paste','drop','compositionstart','compositionupdate','compositionend'].forEach(ev => {
+      document.addEventListener(ev, (e) => {
+        if (!window.__shieldState.on || !isTa(e)) return;
+        e.preventDefault(); e.stopPropagation();
+      }, true);
+    });
     document.addEventListener('input', (e) => {
       if (!window.__shieldState.on || !isTa(e)) return;
       e.stopPropagation();
-      try {
-        if (typeof ta !== 'undefined' && ta && typeof OKV !== 'undefined') {
-          if (norm(ta.value) !== OKV) ta.value = OKV;
-        }
-      } catch (err) {}
+      try { if (typeof ta !== 'undefined' && ta && typeof OKV !== 'undefined' && normS(ta.value) !== OKV) ta.value = OKV; } catch (err) {}
     }, true);
-
-    // Fallback 2: compositionend rAF - restore sau 1 frame cho IME lạ
     document.addEventListener('compositionend', (e) => {
       if (!window.__shieldState.on || !isTa(e)) return;
       setTimeout(() => {
-        try {
-          if (typeof ta !== 'undefined' && ta && typeof OKV !== 'undefined') {
-            if (norm(ta.value) !== OKV) ta.value = OKV;
-          }
-        } catch (err) {}
+        try { if (typeof ta !== 'undefined' && ta && typeof OKV !== 'undefined' && normS(ta.value) !== OKV) ta.value = OKV; } catch (err) {}
       }, 0);
     }, true);
-
     console.log('%c[shield v2] ✅ Cài đặt. Alt+X không bị chặn.', 'color:#22c55e;font-weight:bold');
   }
 
-  // ============================================================
-  // PART 2: EXTRA SHORTCUTS (idempotent, dự phòng nếu Alt+X fail)
-  // ============================================================
+  // ===== PART 2: SHORTCUTS =====
   if (!window.__hudShortcutExtra) {
     window.__hudShortcutExtra = true;
-    const toggleHud = (why) => {
-      const hud = document.getElementById('__hud');
-      if (!hud) return;
-      hud.style.display = hud.style.display === 'none' ? 'block' : 'none';
-      console.log('[shortcut]', why, '→', hud.style.display);
+    const tg = (why) => {
+      const h = document.getElementById('__hud'); if (!h) return;
+      h.style.display = h.style.display === 'none' ? 'block' : 'none';
+      console.log('[shortcut]', why, '→', h.style.display);
     };
     document.addEventListener('keydown', (e) => {
       const t = e.target;
       if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) && t.id !== 'ta') return;
-      if (e.key === 'F8') { e.preventDefault(); e.stopPropagation(); toggleHud('F8'); return; }
-      if (e.ctrlKey && e.shiftKey && (e.key === 'X' || e.key === 'x')) {
-        e.preventDefault(); e.stopPropagation(); toggleHud('Ctrl+Shift+X'); return;
-      }
-      if (e.ctrlKey && e.shiftKey && (e.key === 'H' || e.key === 'h')) {
-        e.preventDefault(); e.stopPropagation(); toggleHud('Ctrl+Shift+H'); return;
-      }
+      if (e.key === 'F8') { e.preventDefault(); e.stopPropagation(); tg('F8'); return; }
+      if (e.ctrlKey && e.shiftKey && (e.key === 'X' || e.key === 'x')) { e.preventDefault(); e.stopPropagation(); tg('Ctrl+Shift+X'); return; }
+      if (e.ctrlKey && e.shiftKey && (e.key === 'H' || e.key === 'h')) { e.preventDefault(); e.stopPropagation(); tg('Ctrl+Shift+H'); return; }
     }, true);
-    console.log('%c[shortcut] Dự phòng: F8 · Ctrl+Shift+X · Ctrl+Shift+H', 'color:#38bdf8;font-weight:bold');
+    console.log('%c[shortcut] F8 · Ctrl+Shift+X · Ctrl+Shift+H', 'color:#38bdf8;font-weight:bold');
   }
 
-  // ============================================================
-  // PART 3: HUD (toggle nếu đã cài)
-  // ============================================================
+  // ===== PART 3: HUD =====
   const HUD_ID = '__hud';
   if (document.getElementById(HUD_ID)) {
     const e = document.getElementById(HUD_ID);
@@ -99,29 +65,26 @@
     return;
   }
 
-  // ===== Tab identity & role =====
   let tabId = sessionStorage.getItem('hud_tabId');
   if (!tabId) { tabId = Math.random().toString(36).slice(2, 10); sessionStorage.setItem('hud_tabId', tabId); }
   let role = sessionStorage.getItem('hud_role') || 'main';
 
   let bc = null;
-  try { bc = new BroadcastChannel('typing_hud_v9'); } catch (e) {}
+  try { bc = new BroadcastChannel('typing_hud_v10'); } catch (e) {}
   const post = (m) => { if (bc) try { bc.postMessage(Object.assign({ from: tabId }, m)); } catch (e) {} };
 
+  // ===== MODES — thêm `pro` =====
   const MODES = {
-    safe:     { typo: 0.005, dia: 0.15, wrongDia: 0.02,  targetWpm: 115 },
-    balanced: { typo: 0.003, dia: 0.10, wrongDia: 0.01,  targetWpm: 125 },
-    max:      { typo: 0.002, dia: 0.08, wrongDia: 0.005, targetWpm: 135 }
+    safe:     { label: 'An toàn · 115 WPM',        typo: 0.005, dia: 0.15, wrongDia: 0.02,  targetWpm: 115 },
+    balanced: { label: 'Cân bằng · 125 WPM ⭐',     typo: 0.003, dia: 0.10, wrongDia: 0.01,  targetWpm: 125 },
+    max:      { label: 'Tối đa · 135 WPM',          typo: 0.002, dia: 0.08, wrongDia: 0.005, targetWpm: 135 },
+    pro:      { label: '👤 PRO · 120 WPM · siêu an toàn', typo: 0.008, dia: 0.25, wrongDia: 0.03, targetWpm: 120, pro: true }
   };
 
   const workers = {};
-  let farmRunning = false;
-  let farmConfig = null;
-  let autoOn = false;
-  let autoBusy = false;
-  let localConfig = null;
-  let lastJoinAt = 0;
-  let failCount = 0;
+  let farmRunning = false, farmConfig = null;
+  let autoOn = false, autoBusy = false, localConfig = null;
+  let lastJoinAt = 0, failCount = 0;
 
   // ===== CSS =====
   const style = document.createElement('style');
@@ -188,6 +151,8 @@
       font-size:10px;margin-left:6px}
     #__hud .shield-badge.on{background:#166534;color:#22c55e}
     #__hud .shield-badge.off{background:#7f1d1d;color:#ef4444}
+    #__hud .pro-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;
+      margin-left:4px;background:#7c2d12;color:#fb923c}
   `;
   document.head.appendChild(style);
 
@@ -196,8 +161,9 @@
   el.id = HUD_ID;
   el.innerHTML = `
     <div class="hud-h">
-      <span>🛠 FARM v9 <span class="role-badge" id="__hud_rolebadge">MAIN</span>
+      <span>🛠 FARM v10 <span class="role-badge" id="__hud_rolebadge">MAIN</span>
         <span class="shield-badge on" id="__hud_shieldbadge">SHIELD</span>
+        <span class="pro-badge" id="__hud_probadge" style="display:none">PRO</span>
       </span>
       <span>
         <button class="mini" id="__hud_switch">Worker</button>
@@ -228,7 +194,7 @@
             <span>Chặn gõ thật vào ô thi</span>
             <input type="checkbox" id="__hud_shield" checked>
           </div>
-          <p class="note">Bật: user gõ vào ô thi KHÔNG vào được — chỉ bot điền. Modifier keys (Alt/Ctrl) vẫn hoạt động để dùng shortcut. Test: focus ô thi → bấm phím bất kỳ → chữ không hiện = OK.</p>
+          <p class="note">Bật: user gõ KHÔNG vào được ô. Bot vẫn điền được. Modifier keys (Alt/Ctrl) pass through để dùng shortcut.</p>
         </div>
         <div class="hud-sec">
           <h4>Farm local (tab này)</h4>
@@ -246,6 +212,7 @@
             <option value="safe">An toàn · 115 WPM</option>
             <option value="balanced" selected>Cân bằng · 125 WPM ⭐</option>
             <option value="max">Tối đa · 135 WPM</option>
+            <option value="pro">👤 PRO · 120 WPM · siêu an toàn</option>
           </select>
           <input id="__hud_lcode" placeholder="Mã lớp (nếu class)" style="display:none">
           <input id="__hud_lpass" placeholder="Mật khẩu lớp" style="display:none" type="password">
@@ -253,7 +220,7 @@
             <button class="go" id="__hud_lstart">▶ Bật</button>
             <button class="stop" id="__hud_lstop" disabled>■ Tắt</button>
           </div>
-          <p class="note">Dùng account LS của tab này (tp_name/tp_mssv).</p>
+          <p class="note"><b>PRO mode:</b> mô phỏng 100% pro typist — word-level rhythm, 3 typo types, hesitation từ dài, Telex 2 bước. Áp dụng cho mọi loại phòng.</p>
         </div>
         <div class="hud-sec">
           <h4>Log <span style="color:#475569;font-size:10px">(console clear 7s)</span></h4>
@@ -278,13 +245,14 @@
             <option value="safe">An toàn · 115 WPM</option>
             <option value="balanced" selected>Cân bằng · 125 WPM ⭐</option>
             <option value="max">Tối đa · 135 WPM</option>
+            <option value="pro">👤 PRO · 120 WPM · siêu an toàn</option>
           </select>
           <input id="__hud_fcode" placeholder="Mã lớp (class)" style="display:none">
           <input id="__hud_fpass" placeholder="Mật khẩu lớp" style="display:none" type="password">
           <input id="__hud_fprefix" placeholder="Room prefix" value="pair" style="display:none">
           <h4 style="margin-top:6px">Accounts (Name|MSSV mỗi dòng)</h4>
           <textarea id="__hud_faccounts" placeholder="Nguyễn Văn A|TH001&#10;Trần Thị B|TH002"></textarea>
-          <p class="note">Để trống = mỗi worker dùng LS của tab đó (cần profile riêng). Điền đủ để tránh trùng MSSV.</p>
+          <p class="note">Để trống = mỗi worker dùng LS của tab đó. Điền đủ để tránh trùng MSSV.</p>
           <div class="row2" style="margin-top:6px">
             <button class="go" id="__hud_fstart">▶ Start Farm</button>
             <button class="stop" id="__hud_fstop" disabled>■ Stop</button>
@@ -310,7 +278,8 @@
             2. Mỗi tab: paste script<br>
             3. Tab chính: giữ MAIN. Tab phụ: bấm nút <b>Worker</b><br>
             4. Tab chính → tab <b>Farm</b> → điền accounts → <b>Start Farm</b><br>
-            5. Worker tự join → gõ → xong → rejoin
+            5. Worker tự join → gõ → xong → rejoin<br>
+            6. Chọn mode <b>PRO</b> để mô phỏng pro typist
           </p>
         </div>
       </div>
@@ -333,7 +302,6 @@
   const ready = () => typeof S !== 'undefined' && typeof tx === 'function'
                    && typeof paint === 'function' && typeof TL !== 'undefined'
                    && typeof OKV !== 'undefined';
-
   const getStatusStr = () => {
     if (!ready()) return 'idle';
     if (typeof S !== 'undefined' && S) {
@@ -347,10 +315,13 @@
     mssv: sessionStorage.getItem('hud_mssv') || LS.get('tp_mssv') || ''
   });
 
-  const send = (txt, keys = 1) => {
+  // ===== Send nâng cấp: tính delta keys =====
+  const send = (txt, explicitKeys = 0) => {
     if (typeof ta === 'undefined' || !ta) return;
     const n = norm(txt);
     if (n === OKV) return;
+    const delta = Math.abs(n.length - OKV.length);
+    const keys = explicitKeys > 0 ? explicitKeys : Math.max(1, delta);
     ta.value = n; OKV = n;
     if (typeof S !== 'undefined' && S && S.cls) cval = n;
     const now = performance.now();
@@ -390,7 +361,7 @@
     'ư':'u','ừ':'u','ứ':'u','ử':'u','ữ':'u','ự':'u','ỳ':'y','ý':'y','ỷ':'y','ỹ':'y','ỵ':'y','đ':'d' };
   const getBase = ch => { const b = BASE[ch.toLowerCase()]; if (!b) return null; return ch === ch.toUpperCase() ? b.toUpperCase() : b; };
 
-  // ===== Shield UI binding =====
+  // ===== Shield UI =====
   const shieldCheckbox = $('__hud_shield');
   const shieldBadge = $('__hud_shieldbadge');
   const syncShieldUI = () => {
@@ -408,18 +379,34 @@
   }
   syncShieldUI();
 
-  // ===== Core typing =====
+  // ===== Pro badge update =====
+  const updateProBadge = () => {
+    const isPro = ($('__hud_lmode')?.value === 'pro') || ($('__hud_fmode')?.value === 'pro');
+    const b = $('__hud_probadge');
+    if (b) b.style.display = isPro ? 'inline-block' : 'none';
+  };
+  $('__hud_lmode').onchange = updateProBadge;
+  $('__hud_fmode').onchange = updateProBadge;
+
+  // ===== CORE: typing session (v9 + PRO engine) =====
   async function runTypingSession(cfg) {
     const modeCfg = MODES[cfg.mode] || MODES.balanced;
+    const isPro = modeCfg.pro === true;
+
     const target = S.text;
     const targetLen = target.length;
     const durSec = (S.dur || 2) * 60;
-    const overhead = 1 + 2.4 * modeCfg.typo + 1.02 * modeCfg.dia + 2 * modeCfg.dia * modeCfg.wrongDia;
+
+    // Overhead: pro có nhiều thao tác hơn
+    const overhead = isPro
+      ? 1 + 2.9 * modeCfg.typo + 1.05 * modeCfg.dia + 2.5 * modeCfg.dia * modeCfg.wrongDia
+      : 1 + 2.4 * modeCfg.typo + 1.02 * modeCfg.dia + 2 * modeCfg.dia * modeCfg.wrongDia;
+
     const meanDelayMs = 12000 / (overhead * modeCfg.targetWpm);
     const expectedFinishSec = (targetLen * overhead * meanDelayMs) / 1000;
     const expectedRatio = expectedFinishSec / durSec;
 
-    log(`▶ ${cfg.mode} ${modeCfg.targetWpm}WPM · ${targetLen}c/${durSec}s · mean ${meanDelayMs.toFixed(0)}ms · finish ${(expectedRatio*100).toFixed(0)}%`);
+    log(`▶ ${cfg.mode}${isPro ? ' [PRO]' : ''} · ${modeCfg.targetWpm}WPM · ${targetLen}c/${durSec}s · mean ${meanDelayMs.toFixed(0)}ms · finish ${(expectedRatio*100).toFixed(0)}%`);
     if (expectedRatio < 0.85) log(`⚠ Finish sớm → cần cpm ≥ ${modeCfg.targetWpm * 5} trong admin`);
 
     const me = S.me;
@@ -427,56 +414,129 @@
     TL.sy = 0; TL.bl = 0; TL.last = 0; TL.lb = 0;
     ta.value = ''; OKV = '';
 
+    // Pre-scan words cho pro engine
+    const words = [];
+    let wStart = 0;
+    for (let k = 0; k <= targetLen; k++) {
+      if (k === targetLen || target[k] === ' ') {
+        if (k > wStart) words.push({ start: wStart, end: k, len: k - wStart });
+        wStart = k + 1;
+      }
+    }
+    const wordAt = (idx) => words.find(w => idx >= w.start && idx < w.end) || null;
+
     let i = 0, buffer = '';
+
     while (i < targetLen) {
       const isActive = autoOn || (role === 'worker' && farmRunning);
       if (!isActive) break;
       if (!S || S.status !== 'running' || CHEAT || S.players?.[me]?.done) break;
 
-      const r = Math.random();
+      const ch = target[i];
+      const w = wordAt(i);
+      const isWordStart = w && i === w.start;
+      const isWordEnd = w && i === w.end - 1;
+      const isSpace = ch === ' ';
+
+      // ===== DELAY =====
       let d;
-      if (r < 0.20)        d = meanDelayMs * (0.25 + Math.random() * 0.15);
-      else if (r < 0.40)   d = meanDelayMs * (0.50 + Math.random() * 0.20);
-      else if (r < 0.60)   d = meanDelayMs * (0.80 + Math.random() * 0.20);
-      else if (r < 0.80)   d = meanDelayMs * (1.10 + Math.random() * 0.30);
-      else                 d = meanDelayMs * (1.60 + Math.random() * 0.50);
+      if (isPro) {
+        // Pro rhythm: word-level
+        if (isSpace) {
+          // Space sau từ: pause + chuyển động
+          d = meanDelayMs * (1.05 + Math.random() * 0.55);
+        } else if (isWordStart && w && w.len >= 6) {
+          // Đầu từ dài: hesitation (đang đọc từ)
+          d = meanDelayMs * (1.00 + Math.random() * 0.85);
+          if (Math.random() < 0.22) await sleep(70 + Math.random() * 180);
+        } else if (isWordStart) {
+          // Đầu từ ngắn
+          d = meanDelayMs * (0.90 + Math.random() * 0.40);
+        } else if (isWordEnd) {
+          // Cuối từ: tay đã quen
+          d = meanDelayMs * (0.82 + Math.random() * 0.38);
+        } else {
+          // Giữa từ: mixture 5-bucket
+          const r = Math.random();
+          if (r < 0.25)        d = meanDelayMs * (0.35 + Math.random() * 0.20);
+          else if (r < 0.50)   d = meanDelayMs * (0.60 + Math.random() * 0.20);
+          else if (r < 0.75)   d = meanDelayMs * (0.90 + Math.random() * 0.20);
+          else if (r < 0.92)   d = meanDelayMs * (1.15 + Math.random() * 0.25);
+          else                 d = meanDelayMs * (1.55 + Math.random() * 0.35);
+        }
+      } else {
+        // v9 rhythm
+        const r = Math.random();
+        if (r < 0.20)        d = meanDelayMs * (0.25 + Math.random() * 0.15);
+        else if (r < 0.40)   d = meanDelayMs * (0.50 + Math.random() * 0.20);
+        else if (r < 0.60)   d = meanDelayMs * (0.80 + Math.random() * 0.20);
+        else if (r < 0.80)   d = meanDelayMs * (1.10 + Math.random() * 0.30);
+        else                 d = meanDelayMs * (1.60 + Math.random() * 0.50);
+      }
       d = Math.max(20, Math.min(2000, d));
 
-      const ch = target[i];
       const base = getBase(ch);
 
-      if (Math.random() < modeCfg.typo && /[a-zA-Z]/.test(ch)) {
+      // ===== PRO TYPO ENGINE: 3 loại =====
+      if (isPro && /[a-zA-Z]/.test(ch) && Math.random() < modeCfg.typo) {
+        const tp = Math.random();
+        if (tp < 0.60) {
+          // Adjacent: gõ nhầm phím gần
+          await sleep(d);
+          send(buffer + nearKey(ch));
+          await sleep(60 + Math.random() * 100);
+          // Nhận ra
+          await sleep(80 + Math.random() * 150);
+          send(buffer);                                    // backspace
+          await sleep(50 + Math.random() * 100);
+          send(buffer + ch);                               // gõ lại
+        } else if (tp < 0.90) {
+          // Double: gõ 2 lần, xóa 1
+          await sleep(d);
+          send(buffer + ch + ch, 2);                       // gõ 2
+          await sleep(70 + Math.random() * 110);
+          send(buffer + ch, 1);                            // xóa 1
+        } else {
+          // Misread: gõ sai phím xa (nhầm hàng)
+          const allChars = 'qwertyuiopasdfghjklzxcvbnm';
+          const wrongChar = allChars[Math.floor(Math.random() * allChars.length)];
+          await sleep(d);
+          send(buffer + wrongChar);
+          await sleep(100 + Math.random() * 160);
+          send(buffer);                                    // backspace
+          await sleep(50 + Math.random() * 100);
+          send(buffer + ch);                               // gõ lại
+        }
+      }
+      // Diacritic 2 bước (Telex) — cả pro lẫn non-pro
+      else if (base && Math.random() < modeCfg.dia) {
         await sleep(d);
-        send(buffer + nearKey(ch), 1);
-        await sleep(60 + Math.random() * 100);
-        send(buffer, 1);
-        await sleep(60 + Math.random() * 100 + d * 0.7);
-        send(buffer + ch, 1);
-      } else if (base && Math.random() < modeCfg.dia) {
-        await sleep(d);
-        send(buffer + base, 1);
-        await sleep(70 + Math.random() * 110);
+        send(buffer + base);                               // gõ base trước
+        await sleep(80 + Math.random() * 100);
         if (Math.random() < modeCfg.wrongDia) {
-          const w = wrongDia(ch);
-          if (w) {
-            send(buffer + w, 1);
-            await sleep(150 + Math.random() * 250);
-            send(buffer + base, 1);
-            await sleep(70 + Math.random() * 110);
+          const wc = wrongDia(ch);
+          if (wc) {
+            send(buffer + wc);                             // sai dấu
+            await sleep(150 + Math.random() * 200);
+            send(buffer + base);                           // backspace về base
+            await sleep(70 + Math.random() * 90);
           }
         }
-        send(buffer + ch, 1);
-      } else {
-        await sleep(d);
-        send(buffer + ch, 1);
+        send(buffer + ch);                                 // đúng
       }
+      else {
+        await sleep(d);
+        send(buffer + ch);
+      }
+
       buffer += ch; i++;
     }
+
     const dur = (performance.now() - S.t0) / 1000;
     log(`✔ ${i}/${targetLen} · ${(dur/durSec*100).toFixed(0)}% dur · kd/len=${(TL.kd/Math.max(1,i)).toFixed(2)}`);
   }
 
-  // ===== Auto loop =====
+  // ===== AUTO LOOP =====
   setInterval(async () => {
     if (autoBusy) return;
     const isActive = autoOn || (role === 'worker' && farmRunning);
@@ -515,7 +575,7 @@
     if (!S && (view === 'home' || view === 'wait') && Date.now() - lastJoinAt > 3500) {
       const acc = getAccount();
       if (!acc.name || acc.name.length < 2 || !/^[A-Z0-9]{5,15}$/.test(acc.mssv)) {
-        log('⚠ Thiếu account'); 
+        log('⚠ Thiếu account');
         if (autoOn) setLocalOn(false);
         if (role === 'worker') farmRunning = false;
         return;
@@ -531,14 +591,16 @@
       setTimeout(() => {
         if (!(autoOn || (role === 'worker' && farmRunning))) return;
         if (typeof S !== 'undefined' && S) failCount = 0;
-        else { failCount++; log(`Join fail (${failCount}/3)`);
+        else {
+          failCount++;
+          log(`Join fail (${failCount}/3)`);
           if (failCount >= 3) { if (autoOn) setLocalOn(false); if (role === 'worker') farmRunning = false; }
         }
       }, 4000);
     }
   }, 700);
 
-  // ===== Local controls =====
+  // ===== LOCAL CONTROLS =====
   const setLocalOn = (on) => {
     autoOn = on;
     $('__hud_lstart').disabled = on;
@@ -567,7 +629,7 @@
     $('__hud_lpass').style.display = isCls ? '' : 'none';
   };
 
-  // ===== Farm controls =====
+  // ===== FARM CONTROLS =====
   const setFarmOn = (on) => {
     farmRunning = on;
     $('__hud_fstart').disabled = on;
@@ -592,7 +654,7 @@
           return { name: n, mssv: (m || '').toUpperCase() };
         })
       : [];
-    if (type === 'duel' && online.length % 2 !== 0) log(`⚠ Duel cần chẵn (hiện ${online.length}) — bỏ cuối`);
+    if (type === 'duel' && online.length % 2 !== 0) log(`⚠ Duel cần chẵn (hiện ${online.length})`);
     if (type === 'class' && (!classCode || !classPass)) { log('⚠ Class cần mã + pass'); return; }
 
     const sorted = online.sort();
@@ -605,7 +667,7 @@
     farmConfig = { type, dur, mode };
     $('__hud_finfo').textContent = `${type} · ${dur}p · ${mode}`;
     setFarmOn(true);
-    log(`▶ Farm ${type} → ${limit} worker`);
+    log(`▶ Farm ${type}${mode === 'pro' ? ' [PRO]' : ''} → ${limit} worker`);
   };
   $('__hud_fstop').onclick = () => {
     post({ type: 'cmd', to: '*', cmd: 'stop' });
@@ -619,7 +681,7 @@
     $('__hud_fprefix').style.display = t === 'duel' ? '' : 'none';
   };
 
-  // ===== Broadcast =====
+  // ===== BROADCAST =====
   if (bc) bc.onmessage = (e) => {
     const m = e.data;
     if (!m || m.from === tabId) return;
@@ -641,7 +703,7 @@
         farmConfig = p.config;
         failCount = 0;
         farmRunning = true;
-        log(`📥 Farm: ${p.config?.type} ${p.config?.dur}p · acc=${p.account?.name || 'LS'}`);
+        log(`📥 Farm: ${p.config?.type} ${p.config?.dur}p ${p.config?.mode}${p.config?.mode === 'pro' ? ' [PRO]' : ''} · acc=${p.account?.name || 'LS'}`);
       }
       if (m.cmd === 'stop' && role === 'worker') { farmRunning = false; log('📥 Stop'); }
     }
@@ -670,7 +732,9 @@
     if (p && p.wpm != null) {
       const w = Math.round(p.wpm);
       $('__hud_wpm').textContent = `${w} WPM · ${p.acc ?? '?'}%`;
-      $('__hud_wpm').className = w > 145 ? 'bad' : (w > 130 ? 'warn' : 'ok');
+      const activeMode = autoOn ? localConfig?.mode : farmConfig?.mode;
+      const tgt = MODES[activeMode]?.targetWpm || 125;
+      $('__hud_wpm').className = w < tgt - 15 ? 'bad' : (w >= tgt - 5 ? 'ok' : 'warn');
     } else $('__hud_wpm').textContent = '–';
     const ce = $('__hud_cv');
     if (typeof TL !== 'undefined' && TL.n > 10) {
@@ -729,10 +793,9 @@
     };
   });
 
-  // ===== Toggle / drag / destroy =====
+  // ===== Toggle / drag =====
   let visible = true; el.style.display = 'block';
   const toggle = () => { visible = !visible; el.style.display = visible ? 'block' : 'none'; };
-  // Alt+X (shield đã cho modifier qua)
   document.addEventListener('keydown', e => {
     if (e.altKey && (e.key === 'x' || e.key === 'X')) { e.preventDefault(); e.stopPropagation(); toggle(); }
   }, true);
@@ -751,8 +814,9 @@
   document.addEventListener('mouseup', () => { drag = null; });
 
   renderRoleUI();
+  updateProBadge();
   post({ type: 'hello', role });
   renderWorkers();
   log(`Role: ${role.toUpperCase()} · Tab: ${tabId} · Shield: ${window.__shieldState.on ? 'ON' : 'OFF'}`);
-  console.log('%c[HUD v9] Full integrated. Alt+X / F8 / Ctrl+Shift+X để toggle.', 'color:#38bdf8;font-weight:bold;font-size:13px');
+  console.log('%c[HUD v10] PRO mode available. Alt+X / F8 toggle.', 'color:#38bdf8;font-weight:bold;font-size:13px');
 })();
